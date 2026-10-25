@@ -134,6 +134,26 @@
 /* Explicit iframe height for the flowing planner layout. */
 .planner-app.google-visible #google-map{height:560px}
 @media(max-width:700px){.planner-app.google-visible #google-map{height:490px}}
+
+/* Place source badges */
+:root{--source-yt:#a63c2e;--source-yt-bg:#fff0ec;--source-tabelog:#8b5b13;--source-tabelog-bg:#fcf3e1;--source-google:#23644e;--source-google-bg:#edf6ef;--source-official:#536577;--source-official-bg:#f0f3f7}
+.place-source-badges{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:8px 0 10px;min-width:0}
+.place-source-badge{display:inline-flex;align-items:center;justify-content:center;max-width:100%;padding:4px 7px;border:1px solid currentColor;border-radius:5px;font:700 10px/1.45 var(--sans,'Noto Sans KR',sans-serif);text-decoration:none!important;white-space:nowrap;letter-spacing:0;transition:filter .15s,transform .15s}
+.place-source-badge:hover{filter:brightness(.94);transform:translateY(-1px)}
+.place-source-badge:focus-visible{outline:3px solid var(--sea,#176b87);outline-offset:3px}
+.source-youtube{color:var(--source-yt)!important;background:var(--source-yt-bg)}
+.source-tabelog{color:var(--source-tabelog)!important;background:var(--source-tabelog-bg)}
+.source-google{color:var(--source-google)!important;background:var(--source-google-bg)}
+.source-official,.source-unconfirmed{color:var(--source-official)!important;background:var(--source-official-bg)}
+.source-compact{gap:3px;margin:5px 0 7px}
+.source-compact .place-source-badge{font-size:9px;line-height:1.4;padding:3px 4px;border-radius:4px}
+.simple-route-flow>li>.place-source-badges{padding:0 4px;margin-bottom:0}
+.simple-food-name+.place-source-badges{min-height:20px}
+.source-photo-redundant{display:none!important}
+.detail-title h2+.place-source-badges{margin-bottom:7px}
+.food-inspector-head .place-source-badges{padding-right:10px}
+@media(max-width:700px){.place-source-badges{gap:4px}.source-compact{gap:3px}.place-source-badge{font-size:9px;padding:4px 6px}.source-compact .place-source-badge{font-size:8px;padding:3px 4px}}
+@media(prefers-reduced-motion:reduce){.place-source-badge{transition:none}.place-source-badge:hover{transform:none}}
 </style></head>
 <body><a class="skip" href="#planner">일정과 지도로 건너뛰기</a>
 <header class="nav-shell"><a class="brand" href="#top"><span class="brand-mark"><svg viewBox="0 0 30 26" fill="none" aria-hidden="true"><path d="m2 23 12-20 14 20H2Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 5 3 5-3" stroke="currentColor" stroke-width="1.8"/></svg></span><span>SHIZUOKA<small>YOUR LITTLE GETAWAY</small></span></a><nav aria-label="여행 메뉴"><a href="#planner">나의 일정</a><a href="#discover">장소 탐색</a><a href="#japan">현지인 추천</a><a href="#creators">15채널 리서치</a></nav><a class="nav-map" id="nav-list" title="시즈오카 Google 지도" target="_blank" rel="noopener">Google 지도 <span>↗</span></a></header>
@@ -402,4 +422,62 @@ $('course23-hotel-photo').src=byId.hotel.photo.data;$('course23-nature-photo').s
 $('nature-time-source').href=DATA.sources['nature-bus'][1];$('nature-pass-source').href=DATA.sources['nature-pass'][1];
 document.querySelector('.planner-app').before(document.querySelector('.mobile-plan-switch'));setupDiningMap();setupSimpleRoute();hydrateIcons();$('nav-list').href=DATA.list.url;$('discover-list').href=DATA.list.url;$('research-summary').innerHTML=`<span><strong>15</strong>서로 다른 한국어 채널</span><span><strong>${DATA.audit.candidateCount}</strong>검색 후보 대조</span><span><strong>2024.10.24—2026.10.24</strong>게시 기간</span><span>확인일 ${esc(DATA.checked)}</span>`;$('footer-check').textContent='자료 확인 '+DATA.checked+' · 제안 일정 / 예약 미확정';$('official-sources').innerHTML=Object.values(DATA.sources).map(s=>ext(s[1],s[0])).join('');renderRoute();renderJapaneseResearch();renderCatalog();renderOverlap();renderCreators();setMapMode('route');
 if(!reduced.matches&&'IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.remove('pending');observer.unobserve(e.target);}});},{threshold:.12});document.querySelectorAll('.reveal').forEach(e=>{if(e.getBoundingClientRect().top>innerHeight){e.classList.add('pending');observer.observe(e);}});}
-</script><noscript><p class="no-js">날짜·장소·지도 선택에는 JavaScript가 필요합니다. 브라우저에서 JavaScript를 허용해 주세요.</p></noscript></body></html>
+</script><noscript><p class="no-js">날짜·장소·지도 선택에는 JavaScript가 필요합니다. 브라우저에서 JavaScript를 허용해 주세요.</p></noscript><!-- Place source badges --><script>/* Provenance comes from reviewed evidence, not from a link or a channel count alone. */
+var PlaceSourceBadges=(()=>{
+ const encode=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function external(value){try{const u=new URL(value);if(!['https:','http:'].includes(u.protocol))return null;u.searchParams.delete('authuser');return u.href;}catch{return null;}}
+ function youtube(id,seconds){if(!id)return null;return 'https://www.youtube.com/watch?v='+encodeURIComponent(id)+(Number.isFinite(seconds)?'&t='+seconds+'s':'');}
+ function referenceScope(text){return /체인|브랜드|과거 지점/.test(text)?'chain':/권역/.test(text)?'area':'reference';}
+ function sourcesFor(place){
+  if(!place)return [];
+  const result=[],meta=place.foodMeta,videoEvidence=meta?.videoEvidence||[];
+  const exact=videoEvidence.filter(v=>v.exact&&external(v.url));
+  const reference=videoEvidence.filter(v=>external(v.url));
+  const refs=(place.refs||[]).filter(r=>r.videoId||r.url?.includes('youtu'));
+  let video=exact[0]||reference[0];
+  let scope=!exact.length&&reference.length?referenceScope([place.unit,place.tag,video?.scope].join(' ')):'venue';
+  if(!video&&refs.length){const ref=refs[0];video={url:ref.url||youtube(ref.videoId,ref.seconds),scope:ref.label||ref.method||'영상 근거'};const context=[place.unit,place.tag,ref.label,ref.method].join(' ');scope=/체인|브랜드|권역|과거 지점/.test(context)?referenceScope(context):'venue';}
+  if(!video){const match=DATA.jpResearch?.matches?.[place.id]?.[0],v=DATA.jpResearch?.videos?.find(v=>v.key===match?.key);if(v){video={url:youtube(v.id,match.seconds),scope:match.scope,language:'ja'};scope=/브랜드|체인|권역/.test(match.scope||'')?referenceScope(match.scope):'venue';}}
+  if(video&&external(video.url)){const suffix={chain:' · 체인',area:' · 권역',reference:' · 참고',venue:''};const explanation={chain:'체인·브랜드 참고, 현재 지점 방문 근거와 구분. ',area:'권역 영상 근거, 개별 점포 방문 근거와 구분. ',reference:'보완 영상 참고, 현재 점포 방문 근거와 구분. ',venue:'점포·장소 영상 근거. '};result.push({type:'youtube',label:'YouTube'+suffix[scope],url:external(video.url),scope,detail:explanation[scope]+(video.language==='ja'?'일본 유튜브 · ':'')+(video.channel?video.channel+' · ':'')+(video.scope||'')});}
+  const tabelog=meta?.tabelog;
+  if(tabelog?.url&&external(tabelog.url))result.push({type:'tabelog',label:'타베로그',url:external(tabelog.url),scope:'reviews',detail:`해당 지점 ${Number(tabelog.score).toFixed(2)} · 후기 ${Number(tabelog.reviewCount).toLocaleString('ko-KR')}건 · ${tabelog.checked} 직접 확인`});
+  const google=meta?.google;
+  const mapUrl=external(google?.url||place.url);
+  const isMap=mapUrl&&(/(^|\.)google\.[a-z.]+$/.test(new URL(mapUrl).hostname)||new URL(mapUrl).hostname==='maps.app.goo.gl')&&(/\/maps|maps.app.goo.gl/.test(mapUrl));
+  if(isMap&&(google||place.saved||BASE_PLACES.some(p=>p.id===place.id))){
+   const hasReviews=Number.isFinite(google?.reviewCount)&&google.reviewCount>0;
+   const facility=hasReviews&&/복합|시설|매점/.test(google.scope||'');
+   result.push({type:'google',label:facility?'Google Maps · 시설':hasReviews?'Google Maps':'Google Maps · 위치',url:mapUrl,scope:facility?'facility':hasReviews?'reviews':'location',detail:hasReviews?`${facility?'시설 범위 리뷰, 식당 단독 평가와 구분. ':''}${google.rating??'—'} · 리뷰 ${google.reviewCount.toLocaleString('ko-KR')}개 · ${google.scope||''} · ${google.checked||DATA.foodMap?.checked||''} 확인`:'지도 위치 확인 · 리뷰 기반 추천 근거와 구분'});
+  }
+  if(!result.some(s=>s.type==='youtube'||s.type==='tabelog')){
+   const key=(place.official||[]).find(key=>DATA.sources[key]&&external(DATA.sources[key][1]));
+   if(key)result.push({type:'official',label:'공식 안내',url:external(DATA.sources[key][1]),scope:'official',detail:DATA.sources[key][0]});
+  }
+  return result;
+ }
+ function badgeHTML(place){const sources=sourcesFor(place);return sources.length?sources.map(source=>`<a class="place-source-badge source-${source.type}" data-source="${source.type}" data-source-scope="${source.scope}" href="${encode(source.url)}" target="_blank" rel="noopener" title="${encode(source.detail)}" aria-label="${encode(place.name+' · '+source.label+' · '+source.detail+' · 새 탭에서 출처 열기')}">${encode(source.label)}</a>`).join(''):'<span class="place-source-badge source-unconfirmed">출처 미확인</span>';}
+ function mount(after,place,compact=false){
+  if(!after||!place)return;
+  const parent=after.parentElement;
+  let group=parent.querySelector(':scope > .place-source-badges');
+  const signature=place.id+'|'+compact+'|'+JSON.stringify(sourcesFor(place));
+  if(group?.dataset.sourceSignature===signature)return;
+  if(!group){group=document.createElement('div');after.insertAdjacentElement('afterend',group);}
+  group.className='place-source-badges'+(compact?' source-compact':'');
+  group.dataset.sourceSignature=signature;group.dataset.placeId=place.id;
+  group.setAttribute('aria-label',place.name+' 출처');group.innerHTML=badgeHTML(place);
+ }
+ function refresh(){
+  document.querySelectorAll('.simple-stop[data-step-to]').forEach(button=>{const place=byId[route?.stops[Number(button.dataset.stepTo)]?.id];if(place?.cat!=='base')mount(button,place,true);});
+  document.querySelectorAll('.simple-food-card').forEach(card=>{const name=card.querySelector('.simple-food-name[data-food-inspect]');mount(name,byId[name?.dataset.foodInspect],true);const overlay=card.querySelector('.simple-food-photo>span');if(overlay&&/^(유튜브 확인|주변 후보)$/.test(overlay.textContent.trim()))overlay.classList.add('source-photo-redundant');});
+  document.querySelectorAll('.food-option').forEach(card=>{const heading=card.querySelector('h4'),button=heading?.querySelector('[data-food-inspect]');mount(heading,byId[button?.dataset.foodInspect]);});
+  document.querySelectorAll('.place-card').forEach(card=>{const heading=card.querySelector('h3'),button=heading?.querySelector('[data-detail]');mount(heading,byId[button?.dataset.detail]);});
+  document.querySelectorAll('.jp-place').forEach(card=>{const button=card.querySelector('[data-food-open]');mount(card.querySelector('h3'),byId[button?.dataset.foodOpen]);});
+  if(document.getElementById('place-dialog')?.open)mount(document.querySelector('#dialog-content h2'),byId[dialogPlace]);
+  if(state.foodInspect)mount(document.querySelector('.food-inspector-head h3'),byId[state.foodInspect],true);
+ }
+ function start(){refresh();let queued=false;const observer=new MutationObserver(records=>{if(records.every(record=>record.target.nodeType===1&&record.target.closest('.place-source-badges')))return;if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;refresh();});});observer.observe(document.body,{childList:true,subtree:true});}
+ if(typeof document!=='undefined')start();
+ return {sourcesFor,refresh};
+})();
+</script></body></html>

@@ -154,6 +154,22 @@
 .food-inspector-head .place-source-badges{padding-right:10px}
 @media(max-width:700px){.place-source-badges{gap:4px}.source-compact{gap:3px}.place-source-badge{font-size:9px;padding:4px 6px}.source-compact .place-source-badge{font-size:8px;padding:3px 4px}}
 @media(prefers-reduced-motion:reduce){.place-source-badge{transition:none}.place-source-badge:hover{transform:none}}
+
+.geo-overview{margin:0 0 22px;border:1px solid var(--line,#dce3eb);border-radius:16px;overflow:hidden;background:var(--pale,#eaf4f5)}
+.geo-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 8px;color:var(--ink,#132b42)}
+.geo-heading strong{font-size:14px}.geo-distance{font-size:11px;color:var(--sea,#176b87);font-weight:700;white-space:nowrap}
+.geo-canvas{position:relative;width:100%;isolation:isolate}.geo-drawing{display:block;width:100%;height:100%;overflow:visible}
+#geo-grid circle{fill:var(--muted,#536577);opacity:.12}#geo-arrow path{fill:var(--sea,#176b87)}
+.geo-route-line>path{fill:none;stroke:var(--sea,#176b87);stroke-width:2.4;stroke-linecap:round;opacity:.65}.geo-route-line>.geo-arrow-leg{stroke:transparent;opacity:.95}
+.geo-north path,.geo-scale path{fill:none;stroke:var(--muted,#536577);stroke-width:1.3}.geo-north text,.geo-scale text{fill:var(--muted,#536577);font:600 10px var(--sans,sans-serif)}.geo-north text{text-anchor:middle}
+.geo-pin-leaders path{fill:none;stroke:var(--sea,#176b87);stroke-width:1;stroke-dasharray:2 3;opacity:.5}
+.geo-pin{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;border:0;background:transparent;padding:6px;z-index:2;cursor:pointer;color:var(--paper,#fff)}
+.geo-pin>span{display:flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 5px;border-radius:50%;background:var(--sea,#176b87);border:2px solid var(--paper,#fff);box-shadow:0 2px 5px #132b4220;font-size:10px;font-weight:800;white-space:nowrap}
+.geo-pin.active>span,.geo-pin.meal>span{background:var(--accent,#d94b2b)}.geo-pin.active>span{outline:4px solid #d94b2b25}.geo-pin:hover>span{transform:scale(1.12)}.geo-pin:focus-visible{outline:2px solid var(--sea,#176b87);outline-offset:2px;border-radius:50%}
+.geo-label{position:absolute;pointer-events:none;color:var(--ink,#132b42);font-size:11px;font-weight:700;line-height:24px;padding:0 5px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;background:var(--pale,#eaf4f5);border-radius:4px;z-index:1}.geo-label.active{color:var(--accent,#d94b2b)}
+.geo-caption{margin:0!important;padding:8px 16px 13px;font-size:10px!important;color:var(--muted,#536577);line-height:1.6}.geo-empty{padding:60px 22px;text-align:center;font-size:13px;color:var(--muted,#536577)}
+@media(max-width:700px){.geo-heading{padding:13px 13px 4px}.geo-heading strong{font-size:12px}.geo-distance{font-size:10px}.geo-caption{font-size:9px!important;padding:6px 12px 11px}.geo-overview{margin-bottom:18px}.geo-label{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.geo-pin:hover>span{transform:none}}
 </style></head>
 <body><a class="skip" href="#planner">일정과 지도로 건너뛰기</a>
 <header class="nav-shell"><a class="brand" href="#top"><span class="brand-mark"><svg viewBox="0 0 30 26" fill="none" aria-hidden="true"><path d="m2 23 12-20 14 20H2Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 5 3 5-3" stroke="currentColor" stroke-width="1.8"/></svg></span><span>SHIZUOKA<small>YOUR LITTLE GETAWAY</small></span></a><nav aria-label="여행 메뉴"><a href="#planner">나의 일정</a><a href="#discover">장소 탐색</a><a href="#japan">현지인 추천</a><a href="#creators">15채널 리서치</a></nav><a class="nav-map" id="nav-list" title="시즈오카 Google 지도" target="_blank" rel="noopener">Google 지도 <span>↗</span></a></header>
@@ -485,5 +501,87 @@ var PlaceSourceBadges=(()=>{
  function start(){refresh();let queued=false;const observer=new MutationObserver(records=>{if(records.every(record=>record.target.nodeType===1&&record.target.closest('.place-source-badges')))return;if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;refresh();});});observer.observe(document.body,{childList:true,subtree:true});}
  if(typeof document!=='undefined')start();
  return {sourcesFor,refresh};
+})();
+
+/* A local geographic overview. Lines connect coordinates; they are not roads. */
+var RouteOverview=(()=>{
+ const RAD=Math.PI/180;
+ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const valid=p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lng)&&Math.abs(p.lat)<=90&&Math.abs(p.lng)<=180;
+ function km(a,b){const dLat=(b.lat-a.lat)*RAD,dLng=(b.lng-a.lng)*RAD,h=Math.sin(dLat/2)**2+Math.cos(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.sin(dLng/2)**2;return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));}
+ function layout(stops,places,overview,width=700,height=330){
+  const points=stops.map((stop,index)=>({stop,index,place:places[stop.id]}));
+  const usable=points.filter(p=>valid(p.place));
+  if(!usable.length)return {nodes:[],segments:[],totalKm:0,missing:points.length,width,height};
+  const centerLat=usable.reduce((n,p)=>n+p.place.lat,0)/usable.length;
+  const origin=usable[0].place;
+  const project=p=>({x:(p.lng-origin.lng)*111.195*Math.cos(centerLat*RAD),y:-(p.lat-origin.lat)*111.195});
+  const raw=usable.map(p=>({...p,...project(p.place)}));
+  const minX=Math.min(...raw.map(p=>p.x)),maxX=Math.max(...raw.map(p=>p.x)),minY=Math.min(...raw.map(p=>p.y)),maxY=Math.max(...raw.map(p=>p.y));
+  const padding=width<500?56:78;
+  const scale=Math.min((width-padding*2)/Math.max(maxX-minX,2),(height-96)/Math.max(maxY-minY,2));
+  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+  const projected=raw.map(p=>({...p,x:width/2+(p.x-cx)*scale,y:height/2+(p.y-cy)*scale}));
+  const byIndex=new Map(projected.map(p=>[p.index,p]));
+  const segments=[];let totalKm=0;
+  for(let i=1;i<points.length;i++){const a=byIndex.get(i-1),b=byIndex.get(i);if(!a||!b)continue;const distance=km(a.place,b.place);totalKm+=distance;if(distance>.005)segments.push({a,b,km:distance});}
+  const nodes=[],wideArea=Math.max(maxX-minX,maxY-minY)>5;
+  overview.forEach(({index},order)=>{const p=byIndex.get(index);if(!p)return;const member={...p,order:order+1};const group=nodes.find(n=>km(n.members[0].place,p.place)<(wideArea?1.25:.25));if(group){group.members.push(member);}else nodes.push({x:p.x,y:p.y,anchorX:p.x,anchorY:p.y,members:[member]});});
+  // Keep distinct destinations tappable when a wide-area route compresses them.
+  for(let iteration=0;iteration<6;iteration++)for(let a=0;a<nodes.length;a++)for(let b=a+1;b<nodes.length;b++){
+   const p=nodes[a],q=nodes[b],dx=q.x-p.x,dy=q.y-p.y,d=Math.hypot(dx,dy);if(d>=46)continue;
+   const push=(46-d)/2,ux=d?dx/d:1,uy=d?dy/d:0;p.x-=ux*push;p.y-=uy*push;q.x+=ux*push;q.y+=uy*push;
+   for(const n of [p,q]){n.x=Math.max(30,Math.min(width-30,n.x));n.y=Math.max(32,Math.min(height-32,n.y));}
+  }
+  const desired=70/scale,exp=10**Math.floor(Math.log10(desired)),unit=desired/exp,scaleKm=(unit>=5?5:unit>=2?2:1)*exp;
+  return {nodes,segments,totalKm,missing:points.length-usable.length,width,height,scaleKm,scalePx:scaleKm*scale};
+ }
+ function markup(model,selectedStep){
+  const {width:w,height:h}=model;
+  if(!model.nodes.length)return '<p class="geo-empty">위치 정보가 없어 지도를 표시할 수 없습니다. 아래 일정과 Google 지도를 확인해 주세요.</p>';
+  const occupied=[];
+  const labelFor=node=>{
+   const active=node.members.find(m=>m.index===selectedStep),first=active||node.members[0];
+   const name=typeof simpleStopName==='function'?simpleStopName(first.stop.id):first.place.name;
+   const distinct=new Set(node.members.map(m=>m.stop.id)).size;
+   const label=distinct>3&&node.members.some(m=>m.stop.id==='station')?'시즈오카 시내 · '+distinct+'곳':name+(distinct>1?' 외 '+(distinct-1)+'곳':'');
+   return {name:label,first,active:!!active};
+  };
+  const labels=model.nodes.map(node=>{
+   const info=labelFor(node),name=info.name,length=Math.min(w<500?138:195,Array.from(name).reduce((n,c)=>n+(c.charCodeAt(0)>255?11:6),0)+16);
+   const options=[[node.x-length/2,node.y+23],[node.x-length/2,node.y-43],[node.x+24,node.y-10],[node.x-length-24,node.y-10],[node.x-length/2,node.y+48],[node.x-length/2,node.y-68]];
+   const candidates=options.map(([x,y])=>({x:Math.max(8,Math.min(w-length-8,x)),y:Math.max(8,Math.min(h-28,y)),w:length,h:24}));
+   const obstacles=[...occupied,...model.nodes.map(p=>({x:p.x-17,y:p.y-17,w:34,h:34}))];
+   const box=candidates.find(c=>!obstacles.some(b=>c.x<b.x+b.w+4&&c.x+c.w+4>b.x&&c.y<b.y+b.h+3&&c.y+c.h+3>b.y))||candidates[0];occupied.push(box);
+   return {...info,node,box};
+  });
+  const paths=model.segments.map((s,i)=>{
+   // Small alternating arcs make outbound and return legs visible separately.
+   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,len=Math.hypot(dx,dy),bend=Math.min(12,len*.08),cx=(s.a.x+s.b.x)/2-dy/len*bend,cy=(s.a.y+s.b.y)/2+dx/len*bend;
+   return `<path d="M${s.a.x},${s.a.y} Q${cx},${cy} ${s.b.x},${s.b.y}"/><path class="geo-arrow-leg" d="M${s.a.x},${s.a.y} Q${(s.a.x+cx)/2},${(s.a.y+cy)/2} ${(s.a.x+2*cx+s.b.x)/4},${(s.a.y+2*cy+s.b.y)/4}" marker-end="url(#geo-arrow)"/>`;
+  }).join('');
+  const leaders=model.nodes.filter(n=>Math.hypot(n.x-n.anchorX,n.y-n.anchorY)>2).map(n=>`<path d="M${n.anchorX} ${n.anchorY}L${n.x} ${n.y}"/>`).join('');
+  return `<svg class="geo-drawing" viewBox="0 0 ${w} ${h}" aria-hidden="true"><defs><pattern id="geo-grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8"/></pattern><marker id="geo-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0 0L6 3L0 6Z"/></marker></defs><rect width="${w}" height="${h}" fill="url(#geo-grid)"/><g class="geo-route-line">${paths}</g><g class="geo-pin-leaders">${leaders}</g><g class="geo-north" transform="translate(${w-27},24)"><path d="M0 19V0M-4 6L0 0L4 6"/><text x="0" y="-8">N</text></g><g class="geo-scale" transform="translate(20,${h-19})"><path d="M0 -4V0H${model.scalePx}V-4"/><text x="0" y="15">${Number(model.scaleKm.toPrecision(2))} km</text></g></svg>${labels.map(({node,first,active,name,box})=>{const numbers=node.members.length>3?node.members[0].order+'+':node.members.map(m=>m.order).join('·'),description=node.members.map(m=>m.order+' '+m.place.name).join(', ');return `<button class="geo-pin ${active?'active':''} ${first.stop.foodChoiceKey?'meal':''}" data-geo-steps="${node.members.map(m=>m.index).join(',')}" style="left:${node.x}px;top:${node.y}px" aria-label="${escape(description)} · 일정에서 선택" aria-pressed="${active}"><span>${escape(numbers)}</span></button><span class="geo-label ${active?'active':''}" style="left:${box.x}px;top:${box.y}px;max-width:${box.w}px" title="${escape(description)}">${escape(name)}</span>`;}).join('')}`;
+ }
+ let queued=false;
+ function refresh(){
+  const host=document.getElementById('route-map');if(!host||typeof route==='undefined'||!route)return;
+  let panel=host.querySelector('.geo-overview');
+  if(!panel){panel=document.createElement('section');panel.className='geo-overview';panel.setAttribute('aria-label','코스 위치와 대략적인 이동 범위');panel.innerHTML='<div class="geo-heading"><strong>한눈에 보는 동선</strong><span class="geo-distance"></span></div><div class="geo-canvas"></div><p class="geo-caption">번호는 아래 방문 순서 · 가까운 스팟은 묶음 · 코스별 자동 축척</p>';const head=host.querySelector('.simple-route-head');if(!head)return;head.insertAdjacentElement('afterend',panel);}
+  const canvas=panel.querySelector('.geo-canvas'),width=Math.round(canvas.clientWidth);if(width<1)return;
+  const overview=simpleRouteStops(),height=width<500?300:330;
+  const signature=JSON.stringify([width,route.stops,state.step,overview.map(s=>s.index)]);
+  if(panel.dataset.signature===signature)return;
+  const model=layout(route.stops,byId,overview,width,height);
+  panel.dataset.signature=signature;canvas.style.height=height+'px';canvas.innerHTML=markup(model,state.step);
+  panel.querySelector('.geo-distance').textContent=model.nodes.length?'직선 합계 약 '+(model.totalKm<10?model.totalKm.toFixed(1):Math.round(model.totalKm))+' km':'';
+  panel.querySelector('.geo-caption').textContent=(model.missing?'일부 위치 미표시 · ':'')+'번호는 아래 방문 순서 · 가까운 스팟은 묶음 · 선은 실제 도로가 아닙니다';
+ }
+ function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;refresh();});}
+ if(typeof document!=='undefined'){
+  document.addEventListener('click',event=>{const pin=event.target.closest('[data-geo-steps]');if(!pin)return;const indices=pin.dataset.geoSteps.split(',').map(Number),current=indices.indexOf(state.step),next=indices[(current+1)%indices.length];stopPlayer();setStep(next,{pan:false});schedule();});
+  const host=document.getElementById('route-map');if(host){new MutationObserver(records=>{if(records.every(r=>r.target.nodeType===1&&r.target.closest('.geo-overview')))return;schedule();}).observe(host,{subtree:true,childList:true});new ResizeObserver(schedule).observe(host);refresh();}
+ }
+ return {km,layout,markup,refresh};
 })();
 </script></body></html>

@@ -130,6 +130,10 @@
 
 .simple-food-photo{height:116px;aspect-ratio:auto}.simple-stop{min-height:68px}
 @media(max-width:700px){.simple-food-photo{height:92px}.simple-stop{min-height:73px}.simple-stop strong{font-size:13px}.simple-stop time{font-size:10px}.simple-food-name{font-size:12px}.simple-food-price{font-size:14px}.simple-food-choose{font-size:10px;min-height:40px}}
+
+/* Explicit iframe height for the flowing planner layout. */
+.planner-app.google-visible #google-map{height:560px}
+@media(max-width:700px){.planner-app.google-visible #google-map{height:490px}}
 </style></head>
 <body><a class="skip" href="#planner">일정과 지도로 건너뛰기</a>
 <header class="nav-shell"><a class="brand" href="#top"><span class="brand-mark"><svg viewBox="0 0 30 26" fill="none" aria-hidden="true"><path d="m2 23 12-20 14 20H2Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 5 3 5-3" stroke="currentColor" stroke-width="1.8"/></svg></span><span>SHIZUOKA<small>YOUR LITTLE GETAWAY</small></span></a><nav aria-label="여행 메뉴"><a href="#planner">나의 일정</a><a href="#discover">장소 탐색</a><a href="#japan">현지인 추천</a><a href="#creators">15채널 리서치</a></nav><a class="nav-map" id="nav-list" title="시즈오카 Google 지도" target="_blank" rel="noopener">Google 지도 <span>↗</span></a></header>

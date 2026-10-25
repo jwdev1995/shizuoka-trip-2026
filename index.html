@@ -141,7 +141,7 @@
 .place-source-badge{display:inline-flex;align-items:center;justify-content:center;max-width:100%;padding:4px 7px;border:1px solid currentColor;border-radius:5px;font:700 10px/1.45 var(--sans,'Noto Sans KR',sans-serif);text-decoration:none!important;white-space:nowrap;letter-spacing:0;transition:filter .15s,transform .15s}
 .place-source-badge:hover{filter:brightness(.94);transform:translateY(-1px)}
 .place-source-badge:focus-visible{outline:3px solid var(--sea,#176b87);outline-offset:3px}
-.source-youtube{color:var(--source-yt)!important;background:var(--source-yt-bg)}
+.source-youtube{color:var(--source-yt)!important;background:var(--source-yt-bg);white-space:normal;overflow-wrap:anywhere;text-align:left;justify-content:flex-start}
 .source-tabelog{color:var(--source-tabelog)!important;background:var(--source-tabelog-bg)}
 .source-google{color:var(--source-google)!important;background:var(--source-google-bg)}
 .source-official,.source-unconfirmed{color:var(--source-official)!important;background:var(--source-official-bg)}
@@ -428,6 +428,12 @@ var PlaceSourceBadges=(()=>{
  function external(value){try{const u=new URL(value);if(!['https:','http:'].includes(u.protocol))return null;u.searchParams.delete('authuser');return u.href;}catch{return null;}}
  function youtube(id,seconds){if(!id)return null;return 'https://www.youtube.com/watch?v='+encodeURIComponent(id)+(Number.isFinite(seconds)?'&t='+seconds+'s':'');}
  function referenceScope(text){return /체인|브랜드|과거 지점/.test(text)?'chain':/권역/.test(text)?'area':'reference';}
+ function videoChannel(video){
+  const id=video.id||new URL(video.url).searchParams.get('v');
+  const korean=(DATA.videos||[]).find(v=>v.id===id||v.extras?.some(extra=>extra.id===id));
+  const japanese=DATA.jpResearch?.videos?.find(v=>v.id===id);
+  return {channel:video.channel?.trim()||korean?.channel||japanese?.channel||'',language:video.language||(japanese?'ja':korean?'ko':'')};
+ }
  function sourcesFor(place){
   if(!place)return [];
   const result=[],meta=place.foodMeta,videoEvidence=meta?.videoEvidence||[];
@@ -438,7 +444,7 @@ var PlaceSourceBadges=(()=>{
   let scope=!exact.length&&reference.length?referenceScope([place.unit,place.tag,video?.scope].join(' ')):'venue';
   if(!video&&refs.length){const ref=refs[0];video={url:ref.url||youtube(ref.videoId,ref.seconds),scope:ref.label||ref.method||'영상 근거'};const context=[place.unit,place.tag,ref.label,ref.method].join(' ');scope=/체인|브랜드|권역|과거 지점/.test(context)?referenceScope(context):'venue';}
   if(!video){const match=DATA.jpResearch?.matches?.[place.id]?.[0],v=DATA.jpResearch?.videos?.find(v=>v.key===match?.key);if(v){video={url:youtube(v.id,match.seconds),scope:match.scope,language:'ja'};scope=/브랜드|체인|권역/.test(match.scope||'')?referenceScope(match.scope):'venue';}}
-  if(video&&external(video.url)){const suffix={chain:' · 체인',area:' · 권역',reference:' · 참고',venue:''};const explanation={chain:'체인·브랜드 참고, 현재 지점 방문 근거와 구분. ',area:'권역 영상 근거, 개별 점포 방문 근거와 구분. ',reference:'보완 영상 참고, 현재 점포 방문 근거와 구분. ',venue:'점포·장소 영상 근거. '};result.push({type:'youtube',label:'YouTube'+suffix[scope],url:external(video.url),scope,detail:explanation[scope]+(video.language==='ja'?'일본 유튜브 · ':'')+(video.channel?video.channel+' · ':'')+(video.scope||'')});}
+  if(video&&external(video.url)){const attribution=videoChannel(video),suffix={chain:' · 체인',area:' · 권역',reference:' · 참고',venue:''};const explanation={chain:'체인·브랜드 참고, 현재 지점 방문 근거와 구분. ',area:'권역 영상 근거, 개별 점포 방문 근거와 구분. ',reference:'보완 영상 참고, 현재 점포 방문 근거와 구분. ',venue:'점포·장소 영상 근거. '};result.push({type:'youtube',channel:attribution.channel,language:attribution.language,label:'YouTube · '+(attribution.channel||'채널 미확인')+(attribution.language==='ja'?' · 일본':'')+suffix[scope],url:external(video.url),scope,detail:explanation[scope]+(attribution.language==='ja'?'일본 유튜브 · ':'')+(attribution.channel?attribution.channel+' · ':'')+(video.scope||'')});}
   const tabelog=meta?.tabelog;
   if(tabelog?.url&&external(tabelog.url))result.push({type:'tabelog',label:'타베로그',url:external(tabelog.url),scope:'reviews',detail:`해당 지점 ${Number(tabelog.score).toFixed(2)} · 후기 ${Number(tabelog.reviewCount).toLocaleString('ko-KR')}건 · ${tabelog.checked} 직접 확인`});
   const google=meta?.google;
